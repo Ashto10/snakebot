@@ -38,6 +38,7 @@ module.exports = function SnakeBot() {
         let user = this.users.find((el) => el.id === userId);
         if (user) {
             clearTimeout(user.reminderTimeout);
+            user.reminderTimeout = null;
         }
     }
 
@@ -48,15 +49,15 @@ module.exports = function SnakeBot() {
 
     this.increaseHelloCounter = () => {
         this.helloResponce.counter++;
-        if (this.helloResponce.timeout) {
+        if (!this.helloResponce.timeout) {
             this.startHelloCounter();
         }
     }
 
     this.startHelloCounter = () => {
         this.helloResponce.timeout = setTimeout(() => {
-            this.helloResponce.counter = 0;
-        }, 6000);
+            this.resetHelloCounter();
+        }, 120000);
     }
 
     this.resetHelloCounter = () => {

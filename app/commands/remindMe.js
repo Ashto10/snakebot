@@ -19,13 +19,14 @@ module.exports = (snakebot, message, options) => {
         responce += `I'll overwrite your previous reminder.\n`;
         snakebot.removeReminder(userId);
     }
-    responce += `I'll ping you in ${time} minute${time > 1 ? 's' : ''}!`;
+    responce += `I'll DM you directly in ${time} minute${time > 1 ? 's' : ''}!`;
     snakeRespond(message, responce);
 
     snakebot.addReminder(userId, setTimeout(() => {
-        //Make sure channel still exists when timer expires
+        // Make sure channel still exists when timer expires
         if (message.channel && !message.channel.deleted) {
-            snakeRespond(message, reminder.toString(), {notifyUser: true} );
+            snakeRespond(message, `HEY, DON'T FORGET:\n${reminder}\n\nOKAY BYE!!!`, {directMessage: true} );
+            snakebot.removeReminder(userId);
         }
         
     }, time * 60000));

@@ -7,12 +7,12 @@ module.exports = (snakebot, message) => {
             snakeRespond(message, 'Well I missed you!');
         } else {
             const currentHellos = snakebot.getHelloCounter();
-            if (currentHellos >= 5) {
-                snakebot.resetHelloCounter();
-                return snakeRespond(message, 'YES?! YES, HELLO?! WHAT?!');
-            } else {
+            if (currentHellos < 4) {
                 snakebot.increaseHelloCounter();
                 return snakeRespond(message, 'YES, HELLO?');
+            } else if (currentHellos < 5) {
+                snakebot.increaseHelloCounter();
+                return snakeRespond(message, 'YES?! YES, HELLO?! WHAT?!');
             }
         }
     }

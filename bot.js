@@ -15,7 +15,7 @@ client.on('ready', () => {
 
 client.on('message', message => {
     // Check to make sure Snakebot isn't replying to itself
-    if (message.member.user.id === client.user.id || message.author.bot) {
+    if (message.member && message.member.user.id === client.user.id || message.author.bot) {
         return;
     }
 
