@@ -1,3 +1,7 @@
 module.exports = (msg, input, options=null) => {
-    msg.channel.send(`\`\`\`${input}\`\`\``);
+    if (options && options.notifyUser) {
+        msg.reply(`\`\`\`${input}\`\`\``);
+    } else {
+        msg.channel.send(`\`\`\`${input}\`\`\``);
+    }
 }
