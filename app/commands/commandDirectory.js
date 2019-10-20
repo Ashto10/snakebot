@@ -24,7 +24,11 @@ module.exports = (client, message) => {
                 toggleReaders(message, false);
                 return;
             case 'quenchme':
-                quenchMe(message, options);
+                quenchMe(message, options, false);
+                break;
+            case 'quenchmexxx':
+                quenchMe(message, options, true);
+                break;
             default:
                 return;
         }

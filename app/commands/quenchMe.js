@@ -1,10 +1,12 @@
+// Catch when there are no google results
+
 const request = require('request');
 const jimp = require('jimp');
 const tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 const snakeRespond = require('../utils/snakeRespond');
 
-function sendImage(message, body, searchTerm) {
+function sendImage(message, body, searchTerm, spoilerResult) {
     let random = Math.random(),
     text = '';
 
@@ -23,7 +25,7 @@ function sendImage(message, body, searchTerm) {
     message.channel.send("```"+text+"```", {
         files: [{
             attachment: body,
-            name: `${searchTerm}.jpg`
+            name: `${spoilerResult ? 'SPOILER_' : ''}${searchTerm}.jpg`
         }]
     });
 }
@@ -181,12 +183,12 @@ function createSoda(imageUrl, searchTerm) {
     });
 }
 
-function quenchMe(message, searchTerm) {
+function quenchMe(message, searchTerm, spoilerResult) {
     searchTerm = searchTerm.trim();
     getSearchResults(searchTerm)
         .then(html => scrapeRandomImgUrl(html))
         .then(imgUrl => createSoda(imgUrl, searchTerm))
-        .then(body => sendImage(message, body, searchTerm))
+        .then(body => sendImage(message, body, searchTerm, spoilerResult))
         .catch(err => {
             return snakeRespond(null, message, err);
         });
