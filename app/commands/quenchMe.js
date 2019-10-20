@@ -20,7 +20,7 @@ function sendImage(message, body, searchTerm) {
         text = "Here you are!"
     }
 
-    message.channel.send(text, {
+    message.channel.send("```"+text+"```", {
         files: [{
             attachment: body,
             name: `${searchTerm}.jpg`
@@ -46,7 +46,7 @@ function getSearchResults(searchTerm) {
 }
 
 function scrapeRandomImgUrl(html) {
-    const imgArray = (cheerio('img', html));
+    const imgArray = cheerio('img', html);
     const random = Math.floor(Math.random() * imgArray.length);
     return imgArray[random].attribs.src;
 }
@@ -93,13 +93,13 @@ function splitText(text, fontLg, fontSm, maxTextWidth) {
             continue;
         }
 
-        if (jimp.measureText(fontSm, firstHalf) > maxTextWidth) {
+        if (jimp.measureText(fontSm, secondHalf) > maxTextWidth) {
             continue;
         }
         return { firstHalf, secondHalf };
     }
 
-    return { err: "Input too long" };
+    return { err: "WHOA, that's way too long of a name. There's no way that's a real soda." };
 }
 
 function createSoda(imageUrl, searchTerm) {
@@ -159,7 +159,10 @@ function createSoda(imageUrl, searchTerm) {
 
         searchTerm = searchTerm.toUpperCase() + " SODA";
 
-        const {firstHalf, secondHalf} = splitText(searchTerm, FONT_BLACK_18, FONT_BLACK_14, maxTextWidth);
+        const {err, firstHalf, secondHalf} = splitText(searchTerm, FONT_BLACK_18, FONT_BLACK_14, maxTextWidth);
+        if (err) {
+            return reject(err);
+        }
 
         if (colorPalette.whiteText) {
             sodaBottle.print(FONT_WHITE_18, textXPos, textYPos, firstHalf, () => {
@@ -185,8 +188,7 @@ function quenchMe(message, searchTerm) {
         .then(imgUrl => createSoda(imgUrl, searchTerm))
         .then(body => sendImage(message, body, searchTerm))
         .catch(err => {
-            console.log("Error creating soda: " + err);
-            return snakeRespond(null, message, "Sorry, I think we're out. Try again later?");
+            return snakeRespond(null, message, err);
         });
 }
 
