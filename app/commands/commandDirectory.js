@@ -1,6 +1,7 @@
 const showHelp = require('./showHelp');
 const remindMe = require('./remindMe').parseUserCommand;
 const toggleReaders = require('./toggleReaders');
+const quenchMe = require('./quenchMe');
 
 module.exports = (client, message) => {
     try {
@@ -22,6 +23,8 @@ module.exports = (client, message) => {
             case 'removereaders':
                 toggleReaders(message, false);
                 return;
+            case 'quenchme':
+                quenchMe(message, options);
             default:
                 return;
         }

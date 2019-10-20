@@ -8,27 +8,33 @@ function toggleReaders(message, isAdding) {
     const adminRole = message.guild.roles.find(r => r.name === "Admin");
         recorderRole = message.guild.roles.find(r => r.name === "Recorders");
 
+    let errorReaction;
+
     if (!adminRole || !recorderRole) {
-        return message.react("❓");
+        errorReaction = "❓";
     }
 
     if (!message.member.roles.has(adminRole.id)) {
-        return message.react("⛔");
+        errorReaction = "⛔";
     }
 
     if (isAdding && message.mentions.members.size < 1) {
-        return message.react("❓");
+        errorReaction = "❓";
+    }
+
+    if (errorReaction) {
+        return message.react(errorReaction).catch(err => console.log("Unable to process reaction: ", err));
     }
 
     const usersToModify = isAdding ? message.mentions.members : message.guild.members;
 
     usersToModify.forEach(user => {
         let action = isAdding ? user.addRole(recorderRole) : user.removeRole(recorderRole);
-        action.then( _ => message.react("👍"))
-            .catch( err => {
-                console.log("Error modifying role: " + err);
-                message.react("⁉")
-            });
+        action.then( _ => {
+            return message.react("👍");
+        }).catch( err => {
+            console.log("Error modifying role: " + err);
+        });
     });
 }
 

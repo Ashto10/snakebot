@@ -18,9 +18,12 @@ module.exports = (client, message, specificHelp) => {
         case 'removereaders':
             output = `Syntax: $removeReaders\n\nSimply removes the "Recorder" role from everyone on the server.`;
             break;
+        case 'quenchme':
+            output = 'Syntax: $quenchMe [search-term]';
+            break;
         case 'main':
         default:
-            output = `Commands:\n$help: Show this text. $help [commandName] gives you more info about that command.\n$remindme: Tell me to remind you about something.\n\nAdmin only:\n$addReaders: Give everyone mentioned the Recorder role\n$removeReaders: Remove the Recorder role from everyone`;
+            output = `Commands:\n$help: Show this text. $help [commandName] gives you more info about that command.\n$remindme: Tell me to remind you about something.\n$quenchMe: I'll get you any flavor soda you want. Any. Flavor.\n\nAdmin only:\n$addReaders: Give everyone mentioned the Recorder role\n$removeReaders: Remove the Recorder role from everyone`;
     }
 
     snakeRespond(client, message, output);
