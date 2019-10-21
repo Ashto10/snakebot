@@ -26,7 +26,7 @@ module.exports = (client, message, specificHelp) => {
             break;
         case 'main':
         default:
-            output = `Commands:\n$help: Show this text. $help [commandName] gives you more info about that command.\n$remindme: Tell me to remind you about something.\n$quenchMe: I'll get you any flavor soda you want. Any. Flavor.\n$quenchMeXXX: Same as above, but I'll cover the label so no one else has to know your terrible, terrible tastes.\n\nAdmin only:\n$addReaders: Give everyone mentioned the Recorder role\n$removeReaders: Remove the Recorder role from everyone`;
+            output = `Commands:\n$help: Show this text. $help [commandName] gives you more info about that command.\n$remindme: Tell me to remind you about something.\n$quenchMe: I'll get you any flavor soda you want. Any. Flavor. *Probably* shouldn't have anything NSFW\n$quenchMeXXX: Same as above, but no SFW filter. To be safe, I'll cover the label so no one else has to know your terrible, terrible tastes.\n\nAdmin only:\n$addReaders: Give everyone mentioned the Recorder role\n$removeReaders: Remove the Recorder role from everyone`;
     }
 
     snakeRespond(client, message, output);

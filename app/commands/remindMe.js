@@ -15,19 +15,19 @@ function parseUserCommand(client, message, options) {
         content = parseOptions.message;
     } catch (error)  {
         return snakeRespond(client, message, 'Sorry, reminders need to follow this format: $remindMe xDxHxMxS [message]');
-    };
+    }
     
     const discordId = message.author.id;
 
     User.findOne({ discordId }, (err, user) => {
         if (err) {
             snakeRespond(client, message, 'Uh, something went wrong there. Maybe try again later?');
-            return console.log('Error: ' + err)
+            return console.log('Error: ' + err);
         }
 
         // If no user found, create a new one
         if (!user) {
-            user = new User({ discordId })
+            user = new User({ discordId });
         }
 
         let responce  = `Okay ${client, message.author.username}, `;
@@ -40,7 +40,7 @@ function parseUserCommand(client, message, options) {
         }
         responce += `I'll DM you directly at ${timer.toString()}!`;
 
-        user.reminder = { content, timer: timer.format() }
+        user.reminder = { content, timer: timer.format() };
 
         // Save reminder to User schema, and create the reminder if successful
         user.save()
@@ -49,7 +49,7 @@ function parseUserCommand(client, message, options) {
                 // If a timeout is returned, store it for later access
                 let timeout = createReminder(client, savedUser);
                 if (timeout) {
-                    client.timers['reminder_' + discordId] = timeout
+                    client.timers['reminder_' + discordId] = timeout;
                 }
             })
             .catch(err => console.log('Error: ' + err));
@@ -60,20 +60,20 @@ function parseUserCommand(client, message, options) {
 function createReminder(client, user) {
     client.fetchUser(user.discordId)
         .then(userToRemind => {
-            if (!userToRemind) { return }
+            if (!userToRemind) { return; }
             let alarmTime = moment(user.reminder.timer);
 
             return setTimeout(() => {
                 snakeRespond(client, userToRemind, `Hey, don't forget:\n\n${user.reminder.content}\n\nOkay bye!`, {directMessage: true});
                 clearReminder(user.discordId);
             }, alarmTime.diff());
-        })
+        });
 }
 
 // Remove the reminder from the specified id
 function clearReminder(discordId) {
     User.findOne({ discordId }, (err, user) => {
-        if (err) { return console.log('Error: ' + err) }
+        if (err) { return console.log('Error: ' + err); }
         user.reminder = null;
         user.save()
             .then()
@@ -84,4 +84,4 @@ function clearReminder(discordId) {
 module.exports = {
     parseUserCommand,
     createReminder
-}
+};
