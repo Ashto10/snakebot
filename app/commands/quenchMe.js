@@ -6,6 +6,11 @@ const tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 const snakeRespond = require('../utils/snakeRespond');
 
+// Collection of error types
+const TEXT_OVERFLOW = "TEXT_OVERFLOW";
+const INVALID_IMAGE = "INVALID_IMAGE";
+const FETCH_ISSUE = "FETCH_ISSUE";
+
 function sendImage(message, body, searchTerm, allowNSFW) {
     let random = Math.random(),
     text = '';
@@ -55,9 +60,9 @@ function getSearchResults(searchTerm, allowNSFW) {
         encoding: null
     };
     return new Promise((resolve, reject) => {
-        request(options, function(err, res, body) {
-            if (err) {
-                return reject(err);
+        request(options, function(error, res, body) {
+            if (error || !res || res.statusCode !== 200) {
+                return reject({ errorType: FETCH_ISSUE, errorDetails: error });
             }
             return resolve(body.toString());
         });
@@ -123,7 +128,7 @@ function splitText(text, fontLg, fontSm, maxTextWidth) {
         return { firstHalf, secondHalf };
     }
 
-    return { err: "WHOA, that's way too long of a name. There's no way that's a real soda." };
+    return { errorType: TEXT_OVERFLOW };
 }
 
 function createSoda(imageUrl, searchTerm) {
@@ -138,8 +143,8 @@ function createSoda(imageUrl, searchTerm) {
         sodaColorMask = sodaBottle.clone();
         imgWidth = sodaBottle.bitmap.width,
         imgHeight = sodaBottle.bitmap.height,
-        label = new jimp(imgWidth/3, imgHeight, (err, img) => {
-            if (err) { return console.log(err) }
+        label = new jimp(imgWidth/3, imgHeight, (error, img) => {
+            if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
             return img;
         });
 
@@ -149,8 +154,8 @@ function createSoda(imageUrl, searchTerm) {
 
         catImage.resize(220, 200);
         let colorPalette = getAverageColor(catImage, 20);
-        const sodaColor = new jimp(imgWidth/3, imgHeight, colorPalette.liquidColor, (err, img) => {
-            if (err) { return console.log(err) }
+        const sodaColor = new jimp(imgWidth/3, imgHeight, colorPalette.liquidColor, (error, img) => {
+            if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
             return img;
         });
 
@@ -183,9 +188,9 @@ function createSoda(imageUrl, searchTerm) {
 
         searchTerm = searchTerm.toUpperCase() + " SODA";
 
-        const {err, firstHalf, secondHalf} = splitText(searchTerm, FONT_BLACK_18, FONT_BLACK_14, maxTextWidth);
-        if (err) {
-            return reject(err);
+        const {error, firstHalf, secondHalf} = splitText(searchTerm, FONT_BLACK_18, FONT_BLACK_14, maxTextWidth);
+        if (error) {
+            return reject(error);
         }
 
         if (colorPalette.whiteText) {
@@ -198,21 +203,63 @@ function createSoda(imageUrl, searchTerm) {
             });
         }
 
-        return sodaBottle.getBuffer(jimp.MIME_JPEG, (err, result) => {
-            if (err) { return reject(err) }
+        return sodaBottle.getBuffer(jimp.MIME_JPEG, (error, result) => {
+            if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
             return resolve(result);
         });
     });
 }
 
-function quenchMe(message, searchTerm, allowNSFW) {
-    searchTerm = searchTerm.trim();
+function getRandomSearchTerm() {
+    const url = `https://random-word-api.herokuapp.com/word?key=${process.env.RANDOM_WORD_API}&number=${Math.floor(Math.random() * 4) + 1}`;
+    const options = {
+        url,
+        method: 'get',
+        encoding: null
+    };
+    return new Promise((resolve, reject) => {
+        request(options, function(error, res, body) {
+            if (error || !res || res.statusCode !== 200) {
+                return reject({ errorType: FETCH_ISSUE, errorDetails: error });
+            }
+            let result = JSON.parse(body.toString());
+            return resolve(result.join(' '));
+        });
+    });
+}
+
+async function quenchMe(message, searchTerm, allowNSFW) {
+    let isRandom;
+    if (searchTerm) {
+        searchTerm = searchTerm.trim();
+    } else {
+        searchTerm = await getRandomSearchTerm();
+        isRandom = true;
+    }
+
     getSearchResults(searchTerm, allowNSFW)
         .then(html => scrapeRandomImgUrl(html))
         .then(imgUrl => createSoda(imgUrl, searchTerm))
         .then(body => sendImage(message, body, searchTerm, allowNSFW))
-        .catch(err => {
-            return snakeRespond(null, message, err);
+        .catch(error => {
+            let message = "Whoops, something went wrong there... try again later?";
+            switch(error.errorType) {
+                case TEXT_OVERFLOW:
+                    if (isRandom) {
+                        message = "Oops, I accidentally dropped it on my way back and it shattered into a mil- I mean, the name I picked was far too long. Yup, that's the issue. Honest";
+                    } else {
+                        message = "Hold on, that name is way too long. There's no way that's a real soda.";
+                    }
+                    break;
+                case FETCH_ISSUE:
+                    message = "Sorry, couldn't get one of the ingredients I needed. Blame Google probably.";
+                    break;
+                case INVALID_IMAGE:
+                    message = "So, I tried mixing everything together, but something went bad. Give it a try again later?";
+                    break;
+            }
+            console.log(error.detail ? error.details : error);
+            return snakeRespond(null, message, message);
         });
 }
 

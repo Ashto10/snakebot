@@ -19,10 +19,10 @@ module.exports = (client, message, specificHelp) => {
             output = `Syntax: $removeReaders\n\nSimply removes the "Recorder" role from everyone on the server.`;
             break;
         case 'quenchme':
-            output = 'Syntax: $quenchMe [search-term]';
+            output = 'Syntax: $quenchMe [search-term]\n\nReturns a soda. Leave the search term empty to get a random one.';
                 break;
         case 'quenchmexxx':
-            output = 'Syntax: $quenchMeXXX [search-term]';
+            output = 'Syntax: $quenchMe [search-term]\n\nReturns a soda. Leave the search term empty to get a random one.';
             break;
         case 'main':
         default:
