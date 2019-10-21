@@ -1,4 +1,5 @@
 // Catch when there are no google results
+// Encode html characters when scraping google
 
 const request = require('request');
 const jimp = require('jimp');
@@ -10,16 +11,30 @@ function sendImage(message, body, searchTerm, spoilerResult) {
     let random = Math.random(),
     text = '';
 
-    if (random > .95) {
-        text = 'I hope you choke on this.'
-    } else if (random > .75) {
-        text = "It'll quench you!"
-    } else if (random > .5) {
-        text = "Nothing's quenchier!"
-    } else if (random > .25) {
-        text = "It's the quenchiest!"
+    if (spoilerResult) {
+        if (random > .95) {
+            text = "You're going to hell before you die."
+        } else if (random > .75) {
+            text = "What the actual fuck?"
+        } else if (random > .5) {
+            text = "Jesus Christ why would you"
+        } else if (random > .25) {
+            text = "Please stop. Just, please stop."
+        } else {
+            text = "Just... just take it and go."
+        }
     } else {
-        text = "Here you are!"
+        if (random > .95) {
+            text = 'I hope you choke on this.'
+        } else if (random > .75) {
+            text = "It'll quench you!"
+        } else if (random > .5) {
+            text = "Nothing's quenchier!"
+        } else if (random > .25) {
+            text = "It's the quenchiest!"
+        } else {
+            text = "Here you are!"
+        }
     }
 
     message.channel.send("```"+text+"```", {
