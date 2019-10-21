@@ -1,4 +1,3 @@
-// Catch when there are no google results
 // Encode html characters when scraping google
 
 const request = require('request');
@@ -7,13 +6,15 @@ const tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 const snakeRespond = require('../utils/snakeRespond');
 
-function sendImage(message, body, searchTerm, spoilerResult) {
+function sendImage(message, body, searchTerm, allowNSFW) {
     let random = Math.random(),
     text = '';
 
-    if (spoilerResult) {
+    if (allowNSFW) {
         if (random > .95) {
             text = "You're going to hell before you die."
+        } else if (random > .90) {
+            text = "Every day we stray futher from god's light."
         } else if (random > .75) {
             text = "What the actual fuck?"
         } else if (random > .5) {
@@ -40,15 +41,16 @@ function sendImage(message, body, searchTerm, spoilerResult) {
     message.channel.send("```"+text+"```", {
         files: [{
             attachment: body,
-            name: `${spoilerResult ? 'SPOILER_' : ''}${searchTerm}.jpg`
+            name: `${allowNSFW ? 'SPOILER_' : ''}${searchTerm}.jpg`
         }]
     });
 }
 
-function getSearchResults(searchTerm) {
+function getSearchResults(searchTerm, allowNSFW) {
+    const url = `https://www.google.com/search?q=${searchTerm}&tbm=isch&tbs=isz:m${allowNSFW ? '' : '&safe=active'}`;
     searchTerm = searchTerm.replace(/\s/g, '+');
     const options = {
-        url: `https://www.google.com/search?q=${searchTerm}&tbm=isch&tbs=isz:m`,
+        url,
         method: 'get',
         encoding: null
     };
@@ -63,9 +65,14 @@ function getSearchResults(searchTerm) {
 }
 
 function scrapeRandomImgUrl(html) {
-    const imgArray = cheerio('img', html);
-    const random = Math.floor(Math.random() * imgArray.length);
-    return imgArray[random].attribs.src;
+    return new Promise((resolve, reject) => {
+        const imgArray = cheerio('img', html);
+        if (imgArray.length === 0) {
+            return reject("Hmm, sorry, couldn't find anything. Nothing that's SFW at least");
+        }
+        const random = Math.floor(Math.random() * imgArray.length);
+        return resolve(imgArray[random].attribs.src);
+    });
 }
 
 function getAverageColor(originalImage, resolution) {
@@ -198,12 +205,12 @@ function createSoda(imageUrl, searchTerm) {
     });
 }
 
-function quenchMe(message, searchTerm, spoilerResult) {
+function quenchMe(message, searchTerm, allowNSFW) {
     searchTerm = searchTerm.trim();
-    getSearchResults(searchTerm)
+    getSearchResults(searchTerm, allowNSFW)
         .then(html => scrapeRandomImgUrl(html))
         .then(imgUrl => createSoda(imgUrl, searchTerm))
-        .then(body => sendImage(message, body, searchTerm, spoilerResult))
+        .then(body => sendImage(message, body, searchTerm, allowNSFW))
         .catch(err => {
             return snakeRespond(null, message, err);
         });
