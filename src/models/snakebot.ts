@@ -1,21 +1,24 @@
-const User = require('./user');
+import User from './user';
+import Discord = require('discord.js');
 
-module.exports = function SnakeBot() {
+class SnakeBot {
+    public client: Discord.Client = new Discord.Client();
     // Object that contains list of users
-    this.users = [];
+    trackedUsers = [];
+    timers = [];
 
     // Tracks how often Snakebot has responded "Yes, Hello"
-    this.helloResponce = {
+    helloResponce = {
         counter: 0,
         timeout: null
     }
 
     // Functions related to user reminders
-    this.addReminder = (userId, timeout) => {
-        let user = this.users.find((el) => el.id === userId);
+    addReminder(userId, timeout) {
+        let user = this.trackedUsers.find((el) => el.id === userId);
         if (!user) {
             user = new User(userId);
-            this.users.push(user);
+            this.trackedUsers.push(user);
         }
         if (user.reminderTimeout) {
             clearTimeout(user.reminderTimeout);
@@ -23,8 +26,8 @@ module.exports = function SnakeBot() {
         user.reminderTimeout = timeout;
     }
 
-    this.isReminderActive = (userId) => {
-        let user = this.users.find((el) => el.id === userId);
+    isReminderActive(userId) {
+        let user = this.trackedUsers.find((el) => el.id === userId);
         if (!user) {
             return false;
         }
@@ -34,8 +37,8 @@ module.exports = function SnakeBot() {
         return true;
     }
 
-    this.removeReminder = (userId) => {
-        let user = this.users.find((el) => el.id === userId);
+    removeReminder(userId) {
+        let user = this.trackedUsers.find((el) => el.id === userId);
         if (user) {
             clearTimeout(user.reminderTimeout);
             user.reminderTimeout = null;
@@ -43,25 +46,27 @@ module.exports = function SnakeBot() {
     }
 
     // Functions related to Snakebot making conversation
-    this.getHelloCounter = () => {
+    getHelloCounter() {
         return this.helloResponce.counter;
     }
 
-    this.increaseHelloCounter = () => {
+    increaseHelloCounter() {
         this.helloResponce.counter++;
         if (!this.helloResponce.timeout) {
             this.startHelloCounter();
         }
     }
 
-    this.startHelloCounter = () => {
+    startHelloCounter() {
         this.helloResponce.timeout = setTimeout(() => {
             this.resetHelloCounter();
         }, 120000);
     }
 
-    this.resetHelloCounter = () => {
+    resetHelloCounter() {
         this.helloResponce.counter = 0;
         clearTimeout(this.helloResponce.timeout);
     }
 }
+
+export default SnakeBot;

@@ -1,13 +1,13 @@
-const createReminder = require('./remindMe').createReminder;
-const User = require('../models/user');
+import { createReminder } from './remindMe';
+import User from '../models/user';
 
-module.exports = client => {
+export default function (snakebot) {
     User.where("reminder").ne(null)
         .exec((err, users) => {
             if (err) { console.log(err)}
             if (users.length < 1) { return  }
             users.forEach(user => {
-                createReminder(client, user);
+                createReminder(snakebot, user);
             });
         });
 }

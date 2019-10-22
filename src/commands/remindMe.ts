@@ -1,9 +1,9 @@
-const snakeRespond = require('../utils/snakeRespond');
-const User = require('../models/user');
+import snakeRespond from '../utils/snakeRespond';
+import User from '../models/user';
 const moment = require('moment');
 
 // Function responsible for parsing incoming command and initializing the reminder
-function parseUserCommand(client, message, options) {
+export default function parseUserCommand(snakebot, message, options) {
     let timer, content;
     try {
         const parseOptions = options.match(/(?<d>\d+(?=d))?d?(?<h>\d+(?=h))?h?(?<m>\d+(?=m))?m?(?<s>\d+(?=s))?s?\s(?<message>.+)/).groups;
@@ -14,14 +14,14 @@ function parseUserCommand(client, message, options) {
         timer = moment().add({d, h, m, s});
         content = parseOptions.message;
     } catch (error)  {
-        return snakeRespond(client, message, 'Sorry, reminders need to follow this format: $remindMe xDxHxMxS [message]');
+        return snakeRespond(snakebot, message, 'Sorry, reminders need to follow this format: $remindMe xDxHxMxS [message]');
     }
     
     const discordId = message.author.id;
 
     User.findOne({ discordId }, (err, user) => {
         if (err) {
-            snakeRespond(client, message, 'Uh, something went wrong there. Maybe try again later?');
+            snakeRespond(snakebot, message, 'Uh, something went wrong there. Maybe try again later?');
             return console.log('Error: ' + err);
         }
 
@@ -30,12 +30,12 @@ function parseUserCommand(client, message, options) {
             user = new User({ discordId });
         }
 
-        let responce  = `Okay ${client, message.author.username}, `;
+        let responce  = `Okay ${message.author.username}, `;
 
         // If user already has a reminder, notify them that it's being overwritten
         if (user.reminder) {
             // Clear the saved timeout id attached to the client 
-            clearTimeout(client.timers['reminder_' + discordId]);
+            clearTimeout(snakebot.client.timers['reminder_' + discordId]);
             responce += `I'll overwrite your previous reminder.\n`;
         }
         responce += `I'll DM you directly at ${timer.toString()}!`;
@@ -45,11 +45,11 @@ function parseUserCommand(client, message, options) {
         // Save reminder to User schema, and create the reminder if successful
         user.save()
             .then(savedUser => {
-                snakeRespond(client, message, responce);
+                snakeRespond(snakebot, message, responce);
                 // If a timeout is returned, store it for later access
-                let timeout = createReminder(client, savedUser);
-                if (timeout) {
-                    client.timers['reminder_' + discordId] = timeout;
+                let timeout = createReminder(snakebot, savedUser);
+                if (timeout !== undefined) {
+                    snakebot.client.timers['reminder_' + discordId] = timeout;
                 }
             })
             .catch(err => console.log('Error: ' + err));
@@ -57,14 +57,14 @@ function parseUserCommand(client, message, options) {
 }
 
 // Create a reminder for the passed in user, or fire immidiately if it was missed during downtime
-function createReminder(client, user) {
-    client.fetchUser(user.discordId)
+export function createReminder(snakebot, user) {
+    snakebot.client.fetchUser(user.discordId)
         .then(userToRemind => {
             if (!userToRemind) { return; }
             let alarmTime = moment(user.reminder.timer);
 
             return setTimeout(() => {
-                snakeRespond(client, userToRemind, `Hey, don't forget:\n\n${user.reminder.content}\n\nOkay bye!`, {directMessage: true});
+                snakeRespond(snakebot, userToRemind, `Hey, don't forget:\n\n${user.reminder.content}\n\nOkay bye!`, {directMessage: true});
                 clearReminder(user.discordId);
             }, alarmTime.diff());
         });
@@ -80,8 +80,3 @@ function clearReminder(discordId) {
             .catch(err => console.log('Error: ' + err));
     });
 }
-
-module.exports = {
-    parseUserCommand,
-    createReminder
-};

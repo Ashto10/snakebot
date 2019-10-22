@@ -1,9 +1,9 @@
-const showHelp = require('./showHelp');
-const remindMe = require('./remindMe').parseUserCommand;
-const toggleReaders = require('./toggleReaders');
-const quenchMe = require('./quenchMe');
+import showHelp from './showHelp';
+import remindMe from './remindMe';
+import toggleReaders from './toggleReaders';
+import quenchMe from './quenchMe';
 
-module.exports = (client, message) => {
+export default function (snakebot, message) {
     try {
         const input = message.content.match(/\$(\w+)\s?(.+)?/);
         const command = input[1].toLowerCase();
@@ -12,10 +12,10 @@ module.exports = (client, message) => {
         // extract command and compare to list, then return result
         switch(command) {
             case 'help':
-                showHelp(client, message, options);
+                showHelp(snakebot, message, options);
                 return;
             case 'remindme':
-                remindMe(client, message, options);
+                remindMe(snakebot, message, options);
                 return;
             case 'addreaders':
                 toggleReaders(message, true);
@@ -24,10 +24,10 @@ module.exports = (client, message) => {
                 toggleReaders(message, false);
                 return;
             case 'quenchme':
-                quenchMe(message, options, false);
+                quenchMe(snakebot, message, options, false);
                 break;
             case 'quenchmexxx':
-                quenchMe(message, options, true);
+                quenchMe(snakebot, message, options, true);
                 break;
             default:
                 return;

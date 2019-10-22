@@ -1,11 +1,11 @@
-const snakeRespond = require('../utils/snakeRespond');
+import snakeRespond from '../utils/snakeRespond';
 
-function toggleReaders(message, isAdding) {
+export default function toggleReaders(message, isAdding) {
     if (!message.guild) {
         return snakeRespond(null, message, `Um, this is a server-specific command, so I'm not sure what you're trying to accomplish here...`);
     }
 
-    const adminRole = message.guild.roles.find(r => r.name === "Admin");
+    const adminRole = message.guild.roles.find(r => r.name === "Admin"),
         recorderRole = message.guild.roles.find(r => r.name === "Recorders");
 
     let errorReaction;
@@ -37,5 +37,3 @@ function toggleReaders(message, isAdding) {
         });
     });
 }
-
-module.exports = toggleReaders;
