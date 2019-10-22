@@ -1,10 +1,13 @@
 // Encode html characters when scraping google
+// Parse possible @user and #channel search terms
 
 const request = require('request');
 const jimp = require('jimp');
 const tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 const snakeRespond = require('../utils/snakeRespond');
+const colorThief = require('color-thief-jimp');
+const randomWords = require('../utils/randomWords');
 
 // Collection of error types
 const TEXT_OVERFLOW = "TEXT_OVERFLOW";
@@ -80,27 +83,11 @@ function scrapeRandomImgUrl(html) {
     });
 }
 
-function getAverageColor(originalImage, resolution) {
-    let count, avgR, avgG, avgB;
-    count = avgR = avgG = avgB = 0;
-
-    img = originalImage.clone()
-    img.cover(resolution, resolution);
-
-    img.scan(0,0,img.bitmap.width,img.bitmap.height, (x, y, idx) => {
-        avgR += img.bitmap.data[idx + 0] * img.bitmap.data[idx + 0];
-        avgG += img.bitmap.data[idx + 1] * img.bitmap.data[idx + 1];
-        avgB += img.bitmap.data[idx + 2] * img.bitmap.data[idx + 2];
-        count++;
-    });
-
-    avgR = Math.floor(Math.sqrt(avgR/count));
-    avgG = Math.floor(Math.sqrt(avgG/count));
-    avgB = Math.floor(Math.sqrt(avgB/count));
-
-    let averageColor = tinyColor({r: avgR, g: avgG, b: avgB}).saturate(100);
-
+function getAverageColor(originalImage) {
+    let palette = colorThief.getPalette(originalImage)[0],
+    averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]});
     return { liquidColor: averageColor.toRgbString(), whiteText: averageColor.isDark() };
+
 }
 
 function splitText(text, fontLg, fontSm, maxTextWidth) {
@@ -125,10 +112,10 @@ function splitText(text, fontLg, fontSm, maxTextWidth) {
         if (jimp.measureText(fontSm, secondHalf) > maxTextWidth) {
             continue;
         }
-        return { firstHalf, secondHalf };
+        return { error: null, firstHalf, secondHalf };
     }
 
-    return { errorType: TEXT_OVERFLOW };
+    return { error: {errorType: TEXT_OVERFLOW} };
 }
 
 function createSoda(imageUrl, searchTerm) {
@@ -153,7 +140,7 @@ function createSoda(imageUrl, searchTerm) {
         sodaColorMask.crop(imgWidth/1.5, 0, imgWidth/3, imgHeight);
 
         catImage.resize(220, 200);
-        let colorPalette = getAverageColor(catImage, 20);
+        let colorPalette = getAverageColor(catImage);
         const sodaColor = new jimp(imgWidth/3, imgHeight, colorPalette.liquidColor, (error, img) => {
             if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
             return img;
@@ -210,30 +197,12 @@ function createSoda(imageUrl, searchTerm) {
     });
 }
 
-function getRandomSearchTerm() {
-    const url = `https://random-word-api.herokuapp.com/word?key=${process.env.RANDOM_WORD_API}&number=${Math.floor(Math.random() * 4) + 1}`;
-    const options = {
-        url,
-        method: 'get',
-        encoding: null
-    };
-    return new Promise((resolve, reject) => {
-        request(options, function(error, res, body) {
-            if (error || !res || res.statusCode !== 200) {
-                return reject({ errorType: FETCH_ISSUE, errorDetails: error });
-            }
-            let result = JSON.parse(body.toString());
-            return resolve(result.join(' '));
-        });
-    });
-}
-
-async function quenchMe(message, searchTerm, allowNSFW) {
+function quenchMe(message, searchTerm, allowNSFW) {
     let isRandom;
     if (searchTerm) {
         searchTerm = searchTerm.trim();
     } else {
-        searchTerm = await getRandomSearchTerm();
+        searchTerm = randomWords(Math.floor(Math.random() * 4) + 1).join(' ');
         isRandom = true;
     }
 
@@ -242,24 +211,24 @@ async function quenchMe(message, searchTerm, allowNSFW) {
         .then(imgUrl => createSoda(imgUrl, searchTerm))
         .then(body => sendImage(message, body, searchTerm, allowNSFW))
         .catch(error => {
-            let message = "Whoops, something went wrong there... try again later?";
+            let errorMessage = "Whoops, something went wrong there... try again later?";
             switch(error.errorType) {
                 case TEXT_OVERFLOW:
                     if (isRandom) {
-                        message = "Oops, I accidentally dropped it on my way back and it shattered into a mil- I mean, the name I picked was far too long. Yup, that's the issue. Honest";
+                        errorMessage = "Oops, I accidentally dropped it on my way back and it shattered into a mil- I mean, the name I picked was far too long. Yup, that's the issue. Honest";
                     } else {
-                        message = "Hold on, that name is way too long. There's no way that's a real soda.";
+                        errorMessage = "Hold on, that name is way too long. There's no way that's a real soda.";
                     }
                     break;
                 case FETCH_ISSUE:
-                    message = "Sorry, couldn't get one of the ingredients I needed. Blame Google probably.";
+                    errorMessage = "Sorry, couldn't get one of the ingredients I needed. Blame Google probably.";
                     break;
                 case INVALID_IMAGE:
-                    message = "So, I tried mixing everything together, but something went bad. Give it a try again later?";
+                    errorMessage = "So, I tried mixing everything together, but something went bad. Give it a try again later?";
                     break;
             }
             console.log(error.detail ? error.details : error);
-            return snakeRespond(null, message, message);
+            return snakeRespond(null, message, errorMessage);
         });
 }
 
