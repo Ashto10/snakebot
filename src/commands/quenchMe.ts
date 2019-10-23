@@ -4,7 +4,7 @@
 
 const request = require('request');
 const Jimp = require('jimp');
-const tinyColor = require("tinycolor2");
+import tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 import snakeRespond from '../utils/snakeRespond';
 const colorThief = require('color-thief-Jimp');
@@ -25,26 +25,27 @@ let templateItemsLoaded = false,
     SODA_COLOR_MASK;
 
 // Hardcoded label info
-    const labelX = 225,
+const labelX = 225,
     labelY = 605,
     labelWidth = 220,
     labelHeight = 200;         
 
 // Hardcoded font info
-    const maxTextWidth = 200,
+const maxTextWidth = 200,
     textXPos = 238,
     textYPos = 818;
 
 function LoadTemplateItems(): Promise<any> {
+    let path = process.cwd() + '/src/assets/'
     if (templateItemsLoaded) {
         return Promise.resolve();
     }
     return Promise.all([
-        Jimp.loadFont(`${process.env.IMAGE_DIR}font/font.fnt`),
-        Jimp.loadFont(process.env.IMAGE_DIR + 'font2/font.fnt'),
-        Jimp.loadFont(process.env.IMAGE_DIR + 'fontW/font.fnt'),
-        Jimp.loadFont(process.env.IMAGE_DIR + 'fontW2/font.fnt'),
-        Jimp.read(process.env.IMAGE_DIR + 'jones-soda-bottle2.png')
+        Jimp.loadFont(path + 'BEBAS_18_BLACK/BEBAS_18_BLACK.fnt'),
+        Jimp.loadFont(path + 'BEBAS_14_BLACK/BEBAS_14_BLACK.fnt'),
+        Jimp.loadFont(path + 'BEBAS_18_WHITE/BEBAS_18_WHITE.fnt'),
+        Jimp.loadFont(path + 'BEBAS_14_WHITE/BEBAS_14_WHITE.fnt'),
+        Jimp.read(path + 'jones-soda-bottle2.png')
     ]).then(items => {
         FONT_DARK = { LARGE: items[0], SMALL: items[1] };
         FONT_LIGHT = { LARGE: items[2], SMALL: items[3] };
@@ -137,8 +138,8 @@ function scrapeRandomImgUrl(html) {
 
 function getAverageColor(originalImage) {
     let palette = colorThief.getPalette(originalImage)[0],
-    averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]});
-    return { liquidColor: averageColor.toRgbString(), whiteText: averageColor.isDark() };
+    averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]}).saturate();
+    return { liquidColor: averageColor, whiteText: averageColor.isDark() };
 
 }
 
@@ -171,9 +172,24 @@ function splitText(text, maxTextWidth) {
     return { error: {errorType: TEXT_OVERFLOW} };
 }
 
+function drawOverMask(mask, source: tinyColor, maskX, maskY, maskWidth, maskHeight): void;
+function drawOverMask(mask, source: any, maskX, maskY, maskWidth, maskHeight): void {
+    let color = source instanceof tinyColor ? { ...source.toRgb() } : undefined;
+    
+    mask.scan(maskX,maskY,maskWidth, maskHeight, (x, y) => {
+        let sourceAlpha = Jimp.intToRGBA(mask.getPixelColor(x,y)).a;
+
+        if (!(source instanceof tinyColor)) {
+            color = { ...Jimp.intToRGBA(source.getPixelColor(x-maskX,y-maskY)) };
+        }
+
+        mask.setPixelColor( Jimp.rgbaToInt( color.r, color.g, color.b, sourceAlpha), x, y);
+    })
+}
+
 function createSoda(imageUrl, searchTerm) {
     return new Promise( async (resolve, reject) => {
-        const catImage = await Jimp.read(imageUrl);
+        const loadedImage = await Jimp.read(imageUrl);
 
         // Make clones of template items
         let sodaBottle = SODA_BOTTLE.clone(),
@@ -183,38 +199,28 @@ function createSoda(imageUrl, searchTerm) {
         const imgWidth = sodaBottle.bitmap.width,
         imgHeight = sodaBottle.bitmap.height;
 
-        catImage.resize(labelWidth,labelHeight);
-         let colorPalette = getAverageColor(catImage);
+        loadedImage.resize(labelWidth,labelHeight);
+        let colorPalette = getAverageColor(loadedImage);
+         
+        const random = Math.random();
+        if (random > 0.8) {
+            loadedImage.normalize();
+        } else if (random > 0.6) {
+            loadedImage.grayscale();
+        } else if (random > 0.4) {
+            let emboss = [[-2,-1,0],[-1,1,1],[0,1,2]];
+            loadedImage.convolution(emboss);
+        }
 
-         const sodaColor = new Jimp(imgWidth, imgHeight, colorPalette.liquidColor, (error, img) => {
-            if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
-            return img;
-        });
+        drawOverMask(sodaMask, loadedImage, labelX, labelY, labelWidth, labelHeight);
+        sodaBottle.composite(sodaMask,0,0);
 
-
-        sodaColor.mask(sodaColorMask, 0, 0);
-
-        sodaBottle.composite(sodaColor, 0, 0, {
+        drawOverMask(sodaColorMask, colorPalette.liquidColor, 0, 0, imgWidth, imgHeight);
+        sodaBottle.composite(sodaColorMask, 0, 0, {
             mode: Jimp.BLEND_OVERLAY,
             opacitySource: .7,
             opacityDest: .9
         });
-         
-         const random = Math.random();
-        if (random > 0.8) {
-            catImage.normalize();
-        } else if (random > 0.6) {
-            catImage.grayscale();
-        } else if (random > 0.4) {
-            let emboss = [[-2,-1,0],[-1,1,1],[0,1,2]];
-            catImage.convolution(emboss);
-        }
-         
-        sodaMask.scan(labelX,labelY,labelWidth, labelHeight, (x, y, idx) => {
-            if (sodaMask.getPixelColor(x,y) !== 255) {
-                sodaBottle.setPixelColor(catImage.getPixelColor(x-labelX,y-labelY), x, y);
-            } 
-        })
 
         searchTerm = searchTerm.toUpperCase() + " SODA";
 
