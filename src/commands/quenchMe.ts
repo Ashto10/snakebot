@@ -7,8 +7,8 @@ const Jimp = require('jimp');
 import tinyColor = require("tinycolor2");
 const cheerio = require('cheerio');
 import snakeRespond from '../utils/snakeRespond';
-const colorThief = require('color-thief-Jimp');
-const randomWords = require('../utils/randomWords');
+//const colorThief = require('color-thief-Jimp');
+import randomWords from '../utils/randomWords';
 
 // Collection of error types
 const TEXT_OVERFLOW = "TEXT_OVERFLOW";
@@ -136,11 +136,35 @@ function scrapeRandomImgUrl(html) {
     });
 }
 
-function getAverageColor(originalImage) {
-    let palette = colorThief.getPalette(originalImage)[0],
-    averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]}).saturate();
-    return { liquidColor: averageColor, whiteText: averageColor.isDark() };
+// TODO: colorThief is not giving adequete results, consider reverting to former method?
+// function getAverageColor(originalImage) {
+//     let palette = colorThief.getPalette(originalImage)[0],
+//     averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]}).saturate();
+//     return { liquidColor: averageColor, whiteText: averageColor.isDark() };
 
+// }
+
+function getAverageColor(originalImage, resolution) {
+    let count, avgR, avgG, avgB, img;
+    count = avgR = avgG = avgB = 0;
+
+    img = originalImage.clone()
+    img.cover(resolution, resolution);
+
+    img.scan(0,0,img.bitmap.width,img.bitmap.height, (x, y, idx) => {
+        avgR += img.bitmap.data[idx + 0] * img.bitmap.data[idx + 0];
+        avgG += img.bitmap.data[idx + 1] * img.bitmap.data[idx + 1];
+        avgB += img.bitmap.data[idx + 2] * img.bitmap.data[idx + 2];
+        count++;
+    });
+
+    avgR = Math.floor(Math.sqrt(avgR/count));
+    avgG = Math.floor(Math.sqrt(avgG/count));
+    avgB = Math.floor(Math.sqrt(avgB/count));
+
+    let averageColor = tinyColor({r: avgR, g: avgG, b: avgB}).saturate(100);
+
+    return { liquidColor: averageColor, whiteText: averageColor.isDark() };
 }
 
 function splitText(text, maxTextWidth) {
@@ -200,7 +224,7 @@ function createSoda(imageUrl, searchTerm) {
         imgHeight = sodaBottle.bitmap.height;
 
         loadedImage.resize(labelWidth,labelHeight);
-        let colorPalette = getAverageColor(loadedImage);
+        let colorPalette = getAverageColor(loadedImage, 10);
          
         const random = Math.random();
         if (random > 0.8) {

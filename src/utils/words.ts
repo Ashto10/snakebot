@@ -1,4 +1,4 @@
-[
+export default [
     "abandon",
     "abash",
     "abate",

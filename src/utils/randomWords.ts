@@ -1,4 +1,4 @@
-const wordList = require('./words.json');
+import wordList from './words';
 
 function getRandomWords(count) {
     let output = [];
@@ -9,4 +9,4 @@ function getRandomWords(count) {
     return output;
 }
 
-module.exports = getRandomWords
+export default getRandomWords
