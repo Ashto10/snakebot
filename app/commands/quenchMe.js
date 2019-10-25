@@ -83,11 +83,27 @@ function scrapeRandomImgUrl(html) {
     });
 }
 
-function getAverageColor(originalImage) {
-    let palette = colorThief.getPalette(originalImage)[0],
-    averageColor = tinyColor({r: palette[0], g: palette[1], b: palette[2]});
-    return { liquidColor: averageColor.toRgbString(), whiteText: averageColor.isDark() };
+function getAverageColor(originalImage, resolution) {
+    let count, avgR, avgG, avgB, img;
+    count = avgR = avgG = avgB = 0;
 
+    img = originalImage.clone()
+    img.cover(resolution, resolution);
+
+    img.scan(0,0,img.bitmap.width,img.bitmap.height, (x, y, idx) => {
+        avgR += img.bitmap.data[idx + 0] * img.bitmap.data[idx + 0];
+        avgG += img.bitmap.data[idx + 1] * img.bitmap.data[idx + 1];
+        avgB += img.bitmap.data[idx + 2] * img.bitmap.data[idx + 2];
+        count++;
+    });
+
+    avgR = Math.floor(Math.sqrt(avgR/count));
+    avgG = Math.floor(Math.sqrt(avgG/count));
+    avgB = Math.floor(Math.sqrt(avgB/count));
+
+    let averageColor = tinyColor({r: avgR, g: avgG, b: avgB}).saturate(100);
+
+    return { liquidColor: averageColor.toRgbString(), whiteText: averageColor.isDark() };
 }
 
 function splitText(text, fontLg, fontSm, maxTextWidth) {
@@ -140,7 +156,7 @@ function createSoda(imageUrl, searchTerm) {
         sodaColorMask.crop(imgWidth/1.5, 0, imgWidth/3, imgHeight);
 
         catImage.resize(220, 200);
-        let colorPalette = getAverageColor(catImage);
+        let colorPalette = getAverageColor(catImage, 10);
         const sodaColor = new jimp(imgWidth/3, imgHeight, colorPalette.liquidColor, (error, img) => {
             if (error) { return reject({ errorType: INVALID_IMAGE, errorDetails: error }) }
             return img;
