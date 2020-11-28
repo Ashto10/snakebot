@@ -9,8 +9,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cheerio": "^1.0.0-rc.3",
+    "color-thief-jimp": "^2.0.2",
     "discord.js": "^12.5.1",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "jimp": "^0.16.1",
+    "request": "^2.88.2",
+    "tinycolor2": "^1.4.2"
   },
   "devDependencies": {
     "prettier": "2.2.0"
