@@ -1,26 +1,19 @@
 const Command = require('./_command')
 
-class ToggleReaders extends Command {
-  static initializeCommand = message => {
-    if (super.commandSentViaDM(message)) return
-
-    const [adminRole, recorderRole] = super.getRoles(message, ['Admin', 'Recorders'])
-    if (!adminRole || !recorderRole) return
-
-    // Prevent non-admins from using this role
-    if (!super.verifyIsAdmin(message, adminRole)) return
-
-    return recorderRole
-  }
-}
-
-class AddReaders extends ToggleReaders {
+class AddReaders extends Command {
   static getDescription = () => 'Give everyone mentioned the Recorder role.'
-  static getHelpText = () =>
-    'Syntax: $addReaders [@Username(s)]\n\nWill add "Recorder" role to everyone mentioned along with the command.'
 
-  static commandFunction = message => {
-    const recorderRole = this.initializeCommand(message)
+  static getHelpText = () => [
+    {
+      syntax: '[@Username(s)]',
+      result: 'Will add "Recorder" role to everyone mentioned along with the command.',
+    },
+  ]
+
+  static settings = () => ({ adminOnly: true, serverOnly: true })
+
+  static run = message => {
+    const recorderRole = super.getRoles(message, ['Recorders'])
     if (!recorderRole) return
 
     const membersToModify = message.mentions.members
@@ -41,13 +34,17 @@ class AddReaders extends ToggleReaders {
   }
 }
 
-class RemoveReaders extends ToggleReaders {
+class RemoveReaders extends Command {
   static getDescription = () => 'Remove the Recorder role from everyone.'
-  static getHelpText = () =>
-    'Syntax: $removeReaders\n\nSimply removes the "Recorder" role from everyone on the server.'
 
-  static commandFunction = message => {
-    const recorderRole = this.initializeCommand(message)
+  static getHelpText = () => [
+    { syntax: '', result: 'Removes the "Recorder" role from everyone on the server.' },
+  ]
+
+  static settings = () => ({ adminOnly: true, serverOnly: true })
+
+  static run = message => {
+    const recorderRole = super.getRoles(message, ['Recorders'])
     if (!recorderRole) return
 
     const membersToModify = message.guild.members.cache

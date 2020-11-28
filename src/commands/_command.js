@@ -3,13 +3,19 @@ class Command {
     this.snakebot = snakebot
   }
 
-  static getDescription = () => 'override me'
-  static getHelpText = () => 'override me'
+  static getDescription = () => 'This command does not currently have a description set.'
+
+  static getHelpText = () => [
+    { syntax: '', result: 'This command does not have any help documentation set up.' },
+  ]
+
+  static settings = () => ({ adminOnly: false, serverOnly: false })
 
   // Cancel operation if command is sent via DMs
-  static commandSentViaDM = message => {
+  static commandSentViaDM = (message, warnIfDM = false) => {
     if (!message.guild) {
-      this.snakebot.respond(message, 'This command is not compatible outside servers, sorry!')
+      if (warnIfDM)
+        this.snakebot.respond(message, 'This command is not compatible outside servers, sorry!')
       return true
     }
 
@@ -22,7 +28,13 @@ class Command {
     })
   }
 
-  static verifyIsAdmin = (message, adminRole) => {
+  static verifyIsAdmin = (message, warnIfRoleNotFound = true) => {
+    // Fail if not in server
+    if (this.commandSentViaDM(message)) return false
+
+    const [adminRole] = this.getRoles(message, ['Admin'], warnIfRoleNotFound)
+    if (!adminRole) return false
+
     if (!message.member.roles.cache.has(adminRole.id)) {
       this.react(message, '⛔')
       return false
@@ -31,7 +43,7 @@ class Command {
     return true
   }
 
-  static getRoles = (message, rolesArray) => {
+  static getRoles = (message, rolesArray, warnIfRoleNotFound = true) => {
     const roleIDs = []
 
     for (let i = 0; i < rolesArray.length; i++) {
@@ -39,10 +51,12 @@ class Command {
       const role = message.guild.roles.cache.find(r => r.name === roleName)
 
       if (!role) {
-        this.snakebot.respond(
-          message,
-          `"${roleName}" role not found! Please make sure such a role exists on this server with that exact name.`,
-        )
+        if (warnIfRoleNotFound) {
+          this.snakebot.respond(
+            message,
+            `"${roleName}" role not found! Please make sure such a role exists on this server with that exact name.`,
+          )
+        }
         roleIDs[i] = null
       } else {
         roleIDs[i] = role

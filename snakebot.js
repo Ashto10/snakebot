@@ -1,7 +1,7 @@
 require('dotenv').config()
 const Discord = require('discord.js')
 const SnakeBot = require('./src/utils/snakeRespond')
-const commandDirectory = require('./src/commands/_directory.js')
+const CommandDirectory = require('./src/commands/_directory.js')
 const respondToName = require('./src/conversation/respondToName')
 
 const client = new Discord.Client()
@@ -11,6 +11,7 @@ client.login(TOKEN)
 
 const Command = require('./src/commands/_command')
 Command.setSnakebotRef(snakebot)
+const cDirectory = new CommandDirectory()
 
 client.on('ready', () => {
   console.info("*Hacker voice* I'm in")
@@ -30,7 +31,7 @@ client.on('message', message => {
     }
     // Handle commands
     else if (message.content.startsWith('$')) {
-      return commandDirectory.parseCommand(snakebot, message)
+      return cDirectory.parseCommand(message)
     }
     // Check to see if Snakebot can reply to the message with anything
     else {

@@ -5,8 +5,6 @@ const request = require('request')
 const jimp = require('jimp')
 const tinyColor = require('tinycolor2')
 const cheerio = require('cheerio')
-const snakeRespond = require('../utils/snakeRespond')
-const colorThief = require('color-thief-jimp')
 const randomWords = require('../utils/randomWords')
 const Command = require('./_command')
 
@@ -84,6 +82,7 @@ function scrapeRandomImgUrl(html) {
       return reject("Hmm, sorry, couldn't find anything. Nothing that's SFW at least")
     }
     const random = Math.floor(Math.random() * imgArray.length)
+
     return resolve(imgArray[random].attribs.src)
   })
 }
@@ -145,7 +144,9 @@ function createSoda(imageUrl, searchTerm) {
       FONT_BLACK_14 = await jimp.loadFont(process.env.IMAGE_DIR + 'font2/font.fnt'),
       FONT_WHITE_18 = await jimp.loadFont(process.env.IMAGE_DIR + 'fontW/font.fnt'),
       FONT_WHITE_14 = await jimp.loadFont(process.env.IMAGE_DIR + 'fontW2/font.fnt'),
-      catImage = await jimp.read(imageUrl),
+      catImage = await jimp.read(imageUrl).catch(error => {
+        throw new Error(`Unable to read image stored at ${imageUrl}`)
+      }),
       sodaBottle = await jimp.read(process.env.IMAGE_DIR + 'jones-soda-bottle.png'),
       sodaMask = sodaBottle.clone()
     sodaColorMask = sodaBottle.clone()
@@ -235,12 +236,16 @@ function createSoda(imageUrl, searchTerm) {
 
 class QuenchMe extends Command {
   static getDescription = () =>
-    "I'll get you any flavor soda you want. Any. Flavor. *Probably* shouldn't have anything NSFW"
-  static getHelpText = () =>
-    'Syntax: $quenchMe [search-term]\n\nReturns a soda. Leave the search term empty to get a random one.'
+    "I'll get you any flavor soda you want. Any. Flavor. Well... I'll try to avoid anything that might be NSFW."
 
-  static commandFunction = (message, searchTerm) => {
-    const allowNSFW = false
+  static getHelpText = () => [
+    { syntax: '[search-term]', result: 'Snakebot will serve you the soda of your choice.' },
+    { syntax: '', result: 'Returns a soda randomly selected by Snakebot.' },
+  ]
+
+  allowNSFW = false
+
+  static run = (message, searchTerm) => {
     let isRandom
     if (searchTerm) {
       searchTerm = searchTerm.trim()
@@ -249,10 +254,10 @@ class QuenchMe extends Command {
       isRandom = true
     }
 
-    getSearchResults(searchTerm, allowNSFW)
+    getSearchResults(searchTerm, this.allowNSFW)
       .then(html => scrapeRandomImgUrl(html))
       .then(imgUrl => createSoda(imgUrl, searchTerm))
-      .then(body => sendImage(message, body, searchTerm, allowNSFW))
+      .then(body => sendImage(message, body, searchTerm, this.allowNSFW))
       .catch(error => {
         let errorMessage = 'Whoops, something went wrong there... try again later?'
         switch (error.errorType) {
@@ -274,8 +279,8 @@ class QuenchMe extends Command {
               'So, I tried mixing everything together, but something went bad. Give it a try again later?'
             break
         }
-        console.log(error.detail ? error.details : error)
-        return snakeRespond(null, message, errorMessage)
+
+        return Command.snakebot.respond(message, errorMessage)
       })
   }
 }
