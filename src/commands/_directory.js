@@ -1,20 +1,49 @@
-const toggleReaders = require('./toggleReaders')
+const { AddReaders, RemoveReaders } = require('./toggleReaders')
 
-module.exports = (snakebot, message) => {
-  try {
+const commandList = {}
+
+const adminCommandList = {
+  addReaders: AddReaders,
+  removeReaders: RemoveReaders,
+}
+
+class Directory {
+  static parseCommand = (snakebot, message) => {
     const input = message.content.match(/\$(\w+)\s?(.+)?/)
-    const command = input[1].toLowerCase()
+    const command = input[1] //.toLowerCase()
     const options = input[2]
 
-    switch (command) {
-      case 'addreaders':
-        return toggleReaders(snakebot, message, true)
-      case 'removereaders':
-        return toggleReaders(snakebot, message, false)
-      default:
-        return
+    if (command === 'help') {
+      if (options !== undefined) {
+        if (Object.keys(commandList).some(command => command === options)) {
+          snakebot.respond(message, commandList[options].getHelpText())
+        } else if (Object.keys(adminCommandList).some(command => command === options)) {
+          snakebot.respond(message, adminCommandList[options].getHelpText())
+        } else {
+          snakebot.respond(message, `Sorry, $${options} is not a currently supported command`)
+        }
+      } else {
+        let commandDescriptions =
+          'Commands:\n$help: Show this text. $help [commandName] gives you more info about that command.'
+
+        Object.keys(commandList).forEach(command => {
+          commandDescriptions += `$${command}: ${commandList[command].getDescription()}\n`
+        })
+
+        commandDescriptions += '\n\nAdmin only commands:\n==========\n'
+
+        Object.keys(adminCommandList).forEach(command => {
+          commandDescriptions += `$${command}: ${adminCommandList[command].getDescription()}\n`
+        })
+
+        snakebot.respond(message, commandDescriptions)
+      }
+    } else if (commandList[command] !== undefined) {
+      commandList[command].commandFunction(message, options)
+    } else if (adminCommandList[command] !== undefined) {
+      adminCommandList[command].commandFunction(message, options)
     }
-  } catch (error) {
-    console.error(error)
   }
 }
+
+module.exports = Directory

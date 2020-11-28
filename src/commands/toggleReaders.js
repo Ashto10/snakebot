@@ -1,58 +1,68 @@
-module.exports = (snakebot, message, isAdding) => {
-  try {
-    // If message.guild is unset, assume this is being called from a DM
-    if (!message.guild) {
-      snakebot.respond(message, 'This is a server-specific command, sorry!')
-    }
+const Command = require('./_command')
 
-    // Get relevant roles
-    const adminRole = message.guild.roles.cache.find(r => r.name === 'Admin')
-    const recorderRole = message.guild.roles.cache.find(r => r.name === 'Recorders')
+class ToggleReaders extends Command {
+  static initializeCommand = message => {
+    if (super.commandSentViaDM(message)) return
 
-    if (!adminRole) {
-      snakebot.respond(
-        message,
-        '"Admin" role not found! Please make sure a role exists on this server with that exact name',
-      )
-    }
-
-    if (!recorderRole) {
-      snakebot.respond(
-        message,
-        '"Recorders" role not found! Please make sure a role exists on this server with that exact name',
-      )
-    }
+    const [adminRole, recorderRole] = super.getRoles(message, ['Admin', 'Recorders'])
+    if (!adminRole || !recorderRole) return
 
     // Prevent non-admins from using this role
-    if (!message.member.roles.cache.has(adminRole.id)) {
-      return message.react('⛔').catch(error => {
-        throw new Error('Unable to process reaction: ', error)
-      })
-    }
+    if (!super.verifyIsAdmin(message, adminRole)) return
 
-    // Prepare list of users to modify
-    const membersToModify = isAdding ? message.mentions.members : message.guild.members.cache
+    return recorderRole
+  }
+}
 
-    // Warn admin if no users were mentioned
+class AddReaders extends ToggleReaders {
+  static getDescription = () => 'Give everyone mentioned the Recorder role.'
+  static getHelpText = () =>
+    'Syntax: $addReaders [@Username(s)]\n\nWill add "Recorder" role to everyone mentioned along with the command.'
+
+  static commandFunction = message => {
+    const recorderRole = this.initializeCommand(message)
+    if (!recorderRole) return
+
+    const membersToModify = message.mentions.members
     if (membersToModify.size < 1) {
-      return message.react('❓').catch(error => {
-        throw new Error('Unable to process reaction: ', error)
-      })
+      return super.react(message, '❓')
     }
 
-    // Modify users
     membersToModify.forEach(member => {
-      let action = isAdding ? member.roles.add(recorderRole) : member.roles.remove(recorderRole)
-      action
+      member.roles
+        .add(recorderRole)
         .then(_ => {
-          return message.react('👍')
+          return super.react(message, '👍')
         })
         .catch(error => {
           throw new Error('Error modifying role: ' + error)
         })
     })
-  } catch (error) {
-    snakebot.respond(message, 'Something unexpected went wrong, sorry about that!')
-    console.error(error)
   }
 }
+
+class RemoveReaders extends ToggleReaders {
+  static getDescription = () => 'Remove the Recorder role from everyone.'
+  static getHelpText = () =>
+    'Syntax: $removeReaders\n\nSimply removes the "Recorder" role from everyone on the server.'
+
+  static commandFunction = message => {
+    const recorderRole = this.initializeCommand(message)
+    if (!recorderRole) return
+
+    const membersToModify = message.guild.members.cache
+
+    membersToModify.forEach(member => {
+      member.roles
+        .remove(recorderRole)
+        .then(_ => {
+          return super.react(message, '👍')
+        })
+        .catch(error => {
+          throw new Error('Error modifying role: ' + error)
+        })
+    })
+  }
+}
+
+module.exports = { AddReaders, RemoveReaders }
