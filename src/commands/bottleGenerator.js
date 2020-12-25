@@ -14,6 +14,7 @@ const INVALID_IMAGE = 'INVALID_IMAGE'
 const FETCH_ISSUE = 'FETCH_ISSUE'
 
 function sendImage(message, body, searchTerm, allowNSFW) {
+  console.log(allowNSFW)
   let random = Math.random(),
     text = ''
 
@@ -145,7 +146,7 @@ function createSoda(imageUrl, searchTerm) {
       FONT_WHITE_18 = await jimp.loadFont(process.env.IMAGE_DIR + 'fontW/font.fnt'),
       FONT_WHITE_14 = await jimp.loadFont(process.env.IMAGE_DIR + 'fontW2/font.fnt'),
       catImage = await jimp.read(imageUrl).catch(error => {
-        throw new Error(`Unable to read image stored at ${imageUrl}`)
+        return reject(`Unable to read image stored at ${imageUrl}`)
       }),
       sodaBottle = await jimp.read(process.env.IMAGE_DIR + 'jones-soda-bottle.png'),
       sodaMask = sodaBottle.clone()
@@ -243,7 +244,7 @@ class QuenchMe extends Command {
     { syntax: '', result: 'Returns a soda randomly selected by Snakebot.' },
   ]
 
-  allowNSFW = false
+  static allowNSFW = false
 
   static run = (message, searchTerm) => {
     let isRandom
@@ -285,4 +286,54 @@ class QuenchMe extends Command {
   }
 }
 
-module.exports = QuenchMe
+class QuenchMeNSFW extends Command {
+  static getDescription = () => "I'll get you any flavor soda you want. Any. Flavor. You perv."
+
+  static getHelpText = () => [
+    { syntax: '[search-term]', result: 'Snakebot will serve you the soda of your choice.' },
+    { syntax: '', result: 'Returns a soda randomly selected by Snakebot.' },
+  ]
+
+  static allowNSFW = true
+
+  static run = (message, searchTerm) => {
+    let isRandom
+    if (searchTerm) {
+      searchTerm = searchTerm.trim()
+    } else {
+      searchTerm = randomWords(Math.floor(Math.random() * 4) + 1).join(' ')
+      isRandom = true
+    }
+
+    getSearchResults(searchTerm, this.allowNSFW)
+      .then(html => scrapeRandomImgUrl(html))
+      .then(imgUrl => createSoda(imgUrl, searchTerm))
+      .then(body => sendImage(message, body, searchTerm, this.allowNSFW))
+      .catch(error => {
+        let errorMessage = 'Whoops, something went wrong there... try again later?'
+        switch (error.errorType) {
+          case TEXT_OVERFLOW:
+            if (isRandom) {
+              errorMessage =
+                "Oops, I accidentally dropped it on my way back and it shattered into a mil- I mean, the name I picked was far too long. Yup, that's the issue. Honest"
+            } else {
+              errorMessage =
+                "Hold on, that name is way too long. There's no way that's a real soda."
+            }
+            break
+          case FETCH_ISSUE:
+            errorMessage =
+              "Sorry, couldn't get one of the ingredients I needed. Blame Google probably."
+            break
+          case INVALID_IMAGE:
+            errorMessage =
+              'So, I tried mixing everything together, but something went bad. Give it a try again later?'
+            break
+        }
+
+        return Command.snakebot.respond(message, errorMessage)
+      })
+  }
+}
+
+module.exports = { QuenchMe, QuenchMeNSFW }

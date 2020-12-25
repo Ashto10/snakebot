@@ -1,9 +1,10 @@
 const { AddReaders, RemoveReaders } = require('./toggleReaders')
 const Command = require('./_command')
-const QuenchMe = require('./bottleGenerator')
+const { QuenchMe, QuenchMeNSFW } = require('./bottleGenerator')
 
 const commandList = [
   { name: 'quenchMe', cmdClass: QuenchMe },
+  { name: 'quenchMeXXX', cmdClass: QuenchMeNSFW },
   {
     name: 'addReaders',
     cmdClass: AddReaders,
